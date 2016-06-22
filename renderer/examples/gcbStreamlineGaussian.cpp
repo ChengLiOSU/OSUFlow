@@ -94,8 +94,15 @@ void draw_streamlines()
     // draw transparent traces
     glEnable (GL_BLEND);
     glDepthMask(GL_FALSE);
-    glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE);
-    glBlendColor(1,1,1,alpha);
+
+#if defined(WIN32) || defined(_WIN32) 
+	//modified by Cheng Li
+	//windows may not support glBlendColor() and GL_CONSTANT_ALPHA. see https://msdn.microsoft.com/en-us/library/windows/desktop/dd318368(v=vs.85).aspx
+#else
+	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE);
+	glBlendColor(1, 1, 1, alpha); 
+#endif
+
     //glDisable(GL_DEPTH_TEST);
     {
         cLineRenderer._Draw();

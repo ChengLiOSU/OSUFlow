@@ -25,7 +25,13 @@ set(SAMPLE_DATA_DIR      "${CMAKE_SOURCE_DIR}/sample_data" CACHE STRING "Path to
 set(WITH_VTK FALSE CACHE BOOL "Compile with VTK integration in VTK/")
 
 set(WITH_TESTING FALSE CACHE BOOL "Enable testing")
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "DEBUG;RELEASE")
+
+if(WIN32)
+	# ADD-BY-CHENGLI 06/22/2016
+	set_property(CACHE CMAKE_CONFIGURATION_TYPES PROPERTY STRINGS "DEBUG;RELEASE")
+else ()
+	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "DEBUG;RELEASE")
+endif()
 
 if(UNIX AND NOT APPLE)
 	add_definitions(
@@ -150,6 +156,11 @@ if( ${WITH_GRAPHICS} )
 				add_definitions(-DFREEGLUT_STATIC)
 			endif()
 		endif()
+
+		# ADD-BY-CHENGLI 06/22/2016
+		set(GLUT_LIBRARY "freeglut.lib" CACHE STRING "freeglut.lib")
+		set_property(CACHE GLUT_LIBRARY PROPERTY STRINGS "freeglut.lib;glut32.lib;openglut.lib")
+
 	endif()
 	
 	include_directories( 
