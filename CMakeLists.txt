@@ -23,6 +23,7 @@ set(PNETCDF_PATH "/usr" CACHE PATH "The installed path of PNETCDF")
 set(SAMPLE_DATA_DIR      "${CMAKE_SOURCE_DIR}/sample_data" CACHE STRING "Path to datasets for testing and examples")  # ADDED-BY-JIMMY 08/05/2013
 
 set(WITH_VTK FALSE CACHE BOOL "Compile with VTK integration in VTK/")
+set(WITH_EDDA FALSE CACHE BOOL "Compile with edda integration in edda/")
 
 set(WITH_TESTING FALSE CACHE BOOL "Enable testing")
 
@@ -181,6 +182,10 @@ endif()
 if (WITH_VTK)
     add_subdirectory (VTK)
 endif (WITH_VTK)
+
+if (WITH_EDDA)
+    add_subdirectory (edda)
+endif (WITH_EDDA)
 
 # ADD-BY-LEETEN 12/23/2011-BEGIN
 if( ${WITH_EXAMPLES} ) 
