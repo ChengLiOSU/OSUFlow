@@ -81,6 +81,7 @@ file(GLOB HEADER_FILES "*.h" )
 list(APPEND SRC_FILES
 	EddaOSUFlow.cxx
 	EddaDatasetProcessor.cxx
+	EddaVectorField.cxx
 	)
 
 # build the project as a library
@@ -128,6 +129,9 @@ endif ()
 
 	
 list(APPEND LINK_LIBS edda_vis_d edda_d )
+#list(APPEND LINK_LIBS edda_vis_d)
+
+
 
 # examples
 add_subdirectory (examples)

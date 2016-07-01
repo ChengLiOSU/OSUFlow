@@ -150,7 +150,7 @@ if( ${WITH_GRAPHICS} )
 			set(FREEGLUT_DIR "/usr" CACHE PATH "The installed root of freeglut.")
 			add_definitions(-DUSE_FREEGLUT)
 			include_directories("${FREEGLUT_DIR}/include")
-			link_directories("${FREEGLUT_DIR}/lib")
+			link_directories("${FREEGLUT_DIR}/lib/win32")
 			
 			set(WITH_FREEGLUT_STATIC TRUE CACHE BOOL "Specify whether the freeglut is static.")
 			if(WITH_FREEGLUT_STATIC)

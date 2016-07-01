@@ -22,7 +22,8 @@ add_definitions (-DVTK_DATA_ROOT=${VTK_DATA_ROOT})
 #LIST(APPEND)
 if( ${WITH_GRAPHICS} )
         LIST (APPEND SIMPLE_TARGETS
-		eddaStreamline
+		eddaFileReaderGlStreamline
+		eddaVectorFieldGlStreamline
         )
 endif ()
 # if ( false ) #${WITH_MPI} )

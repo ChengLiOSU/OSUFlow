@@ -1,25 +1,30 @@
 /*
-
-gcbStreamline:
-The is a demo to show how to generate streamlines by OSUFlow and how to render the generated streamlines.
+eddaStreamline:
+The is a demo to show how to create an eddaVectorField object by an edda dataset. then a vtCStreamLine object is create by this eddaVectorField to compute streamlines to be rendered.
 
 Creted by
-Abon Chaudhuri and Teng-Yok Lee (The Ohio State University)
-May, 2010
-
+Cheng Li (The Ohio State University)
+June, 2016
 */
 
 #include <list>
 #include <iterator>
 
 #include "gcb.h"
-#include "OSUFlow.h"
 #include "LineRendererInOpenGL.h"
 
-#include "EddaOSUFlow.h"
+#include "EddaVectorField.h"
+#include "FieldLine.h"
 
-OSUFlow *osuflow;
-char *szVecFilePath;
+#include "edda.h"
+#include "dataset/dataset.h"
+#include "io/edda_reader.h"
+#include "core/vector_matrix.h"
+
+std::shared_ptr<edda::Dataset<edda::VECTOR3> > dataset; 
+EddaVectorField *flowField;
+vtCStreamLine* pStreamLine;
+
 VECTOR3 minLen, maxLen;
 float center[3], len[3];
 CLineRendererInOpenGL cLineRenderer;
@@ -27,31 +32,46 @@ list<vtListSeedTrace*> sl_list;
 list<VECTOR4> liv4Colors;
 
 
-
-
 ////////////////////////////////////////////////////////////////////////////
 void compute_streamlines()
 {
 	LOG("");
 
-	float from[3], to[3];
-
-	from[0] = minLen[0];   from[1] = minLen[1];   from[2] = minLen[2];
-	to[0] = maxLen[0];   to[1] = maxLen[1];   to[2] = maxLen[2];
-
-	printf("generating seeds...\n");
-	osuflow->SetRandomSeedPoints(from, to, 200);
-	int nSeeds;
-	VECTOR3* seeds = osuflow->GetSeeds(nSeeds);
+	//create seeds
+	edda::VECTOR3 minB, maxB;
+	dataset->getGrid()->boundary(minB, maxB);
+	unsigned int numSeeds[3] = {10, 10, 1 };
+	int	nSeeds = numSeeds[0] * numSeeds[1] * numSeeds[2];
+	VECTOR3 *seeds = new VECTOR3[nSeeds];
+	for (int k = 0; k < numSeeds[2]; k++){
+		for (int j = 0; j < numSeeds[1]; j++){
+			for (int i = 0; i < numSeeds[0]; i++){
+				int ind = k*numSeeds[1] * numSeeds[0] + j*numSeeds[0] + i;
+				seeds[ind] = VECTOR3(
+					minB[0] + (maxB[0] - minB[0])*1.0 / (numSeeds[0] + 1)*(i + 1),
+					minB[1] + (maxB[1] - minB[1])*1.0 / (numSeeds[1] + 1)*(j + 1),
+					minB[2] + (maxB[2] - minB[2])*1.0 / (numSeeds[2] + 1)*(k + 1));
+			}
+		}
+	}
 	for (int i = 0; i<nSeeds; i++)
 		printf(" seed no. %d : [%f %f %f]\n", i, seeds[i][0],
 		seeds[i][1], seeds[i][2]);
 
-	sl_list.clear();
 
+	//using the vtCStreamLine to compute the streamlines
 	printf("compute streamlines..\n");
-	osuflow->SetIntegrationParams(1, 5);
-	osuflow->GenStreamLines(sl_list, BACKWARD_AND_FORWARD, 500, 0);
+	unsigned int randomSeed = 0;
+	pStreamLine->setBackwardTracing(false);
+	pStreamLine->SetInitialStepSize(1);
+	pStreamLine->SetMaxStepSize(5);
+	pStreamLine->setMaxPoints(500);
+	float currentT = 0.0;
+	pStreamLine->setSeedPoints(seeds, nSeeds, currentT, NULL);
+	sl_list.clear();
+	pStreamLine->execute((void *)&currentT, sl_list, NULL);
+
+
 	printf(" done integrations\n");
 	printf("list size = %d\n", (int)sl_list.size());
 
@@ -121,36 +141,6 @@ _KeyboardFunc(unsigned char ubKey, int iX, int iY)
 		glutPostRedisplay();
 		break;
 
-		// ADD-BY-LEETEN 09/29/2012-BEGIN
-	case 'S':
-	{
-				VECTOR3 v3Min, v3Max;
-				osuflow->Boundary(v3Min, v3Max);
-				float pfDomainMin[4];
-				float pfDomainMax[4];
-				for (size_t d = 0; d < 3; d++)
-				{
-					pfDomainMin[d] = v3Min[d];
-					pfDomainMax[d] = v3Max[d];
-				}
-				pfDomainMin[3] = 0.0f;
-				pfDomainMax[3] = 0.0f;
-
-				char szFilename[1024];
-				strcpy(szFilename, szVecFilePath);
-				strcat(szFilename, ".trace");
-
-				OSUFlow::WriteFlowlines(
-					pfDomainMin,
-					pfDomainMax,
-					&sl_list,
-					NULL,
-					szFilename);
-				LOG(printf("Save the streamlines to %s", szFilename));
-	}
-		break;
-		// ADD-BY-LEETEN 09/29/2012-END
-
 	}
 }
 
@@ -195,35 +185,35 @@ quit()
 int
 main(int argc, char* argv[])
 {
-	string filename;
-	//filename = argv[1];
-	filename = "D:/ProjectSource/OSUFlow/edda/sample_data/SW6_PIV.vti";
+	if (argc < 2)
+	{
+		printf("usage: eddaVectorFieldGlStreamline filename\n");
+		return 0;
+	}
+
+	const char* fname = argv[1];
+	//recommanded sample data: "OSUFlow_Source_Dir/edda/sample_data/SW6_PIV.vti";
+
+	//load the edda dataset
+	dataset = edda::loadEddaVector3Dataset(fname, "");
+
+	//create the EddaVectorField using the edda dataset
+	flowField = new EddaVectorField(dataset, 1);
 	
+	//create a vtCStreamLine to compute streamlines
+	pStreamLine = new vtCStreamLine((CVectorField*)flowField);
+
+
 	///////////////////////////////////////////////////////////////
 	// when use GCB, it is still needed to initialize GLUT
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_ALPHA | GLUT_STENCIL);
 
-
-
-	///////////////////////////////////////////////////////////////
-	// initialize OSU flow
-	osuflow = new OSUFlow();
+	edda::VECTOR3 minB, maxB;
+	dataset->getGrid()->boundary(minB, maxB);
 	
-	// load the scalar field
-	//LOG(printf("read file %s\n", argv[1]));
-
-	EddaFileReader efr;
-	efr.loadData(filename.c_str(), osuflow);
-
-
-	szVecFilePath = argv[1];	// ADD-BY-LEETEN 09/29/2012
-
-	// comptue the bounding box of the streamlines 
-	VECTOR3 minB, maxB;
-	osuflow->Boundary(minLen, maxLen); // get the boundary 
-	minB[0] = minLen[0]; minB[1] = minLen[1];  minB[2] = minLen[2];
-	maxB[0] = maxLen[0]; maxB[1] = maxLen[1];  maxB[2] = maxLen[2];
+	minLen[0] = minB[0]; minLen[1] = minB[1];  minLen[2] = minB[2];
+	maxLen[0] = maxB[0]; maxLen[1] = maxB[1];  maxLen[2] = maxB[2];
 	//  osuflow->SetBoundary(minB, maxB);  // set the boundary. just to test
 	// the subsetting feature of OSUFlow
 	printf(" volume boundary X: [%f %f] Y: [%f %f] Z: [%f %f]\n",
@@ -258,6 +248,7 @@ main(int argc, char* argv[])
 
 	// enter the GLUT loop
 	glutMainLoop();
-	
+
 	return 0;
 }
+
